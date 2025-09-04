@@ -1,4 +1,6 @@
-// File: renderer/render_ring8.scd
+// Renderer for 8 speakers in a ring.
+// Same idea as render.scd but instead of stereo panning we drop energy into a
+// circular array of eight outputs.
 s.options.numOutputBusChannels = 8;
 s.boot;
 
