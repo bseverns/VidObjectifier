@@ -236,7 +236,7 @@ Open SuperCollider, start JACK, run one of the renderers, then call `~playScore`
 ---
 
 ## License
-MIT for the scripts unless you prefer otherwise.
+MIT
 
 ---
 
