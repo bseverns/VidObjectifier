@@ -39,8 +39,8 @@ Picture a security camera feeding a garage band.
   when life gives you beautiful Jetsons, you run things like: SuperCollider, 
   JACK, and a Jetson that you probably already cooked noodles on.
 - **Every object gets a personality.** The analyzer measures position, speed,
-  color, even a janky "glitch" metric.  The renderer maps those numbers to
-  timbre.
+  color, **shape**, and even a janky "glitch" metric.  The renderer maps those
+  numbers to timbre.
 - **Live or offline.** Feed it prerecorded footage, or sling live frames from
   TouchDesigner over RTSP/NDI.
 
@@ -96,7 +96,7 @@ sudo nvpmodel -m 0 && sudo jetson_clocks
 
 ## Running the analyzer
 
-The script writes a newline‑timed score with spatial and color features.  The
+The script writes a newline‑timed score with spatial, color, and shape features.  The
 score is just text; open it in a spreadsheet if that makes you smile.
 
 ```bash
