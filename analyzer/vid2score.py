@@ -6,9 +6,9 @@ video (file or RTSP/HTTP URL), runs YOLO object detection, and writes a line of
 `score.csv` for each object it tracks.
 
 Each CSV row carries timestamp, object id/class, position in polar coords,
-speed, confidence, and a handful of goofy "character" features like color and
-edge density.  The SuperCollider renderer turns those numbers into synth
-parameters.
+speed, confidence, and a handful of goofy "character" features like color,
+edge density, and a DIY "shape" score.  The SuperCollider renderer turns those
+numbers into synth parameters.
 """
 
 import argparse
@@ -64,6 +64,58 @@ def edge_density(gray_roi: np.ndarray) -> float:
     return float(np.clip(cv2.Laplacian(gray_roi, cv2.CV_32F).var() / 1000.0, 0.0, 1.0))
 
 
+def shape_magic(bgr_roi: np.ndarray) -> float:
+    """Cook up a mystical shape score (0..1) from color, brightness and edges.
+
+    This is the part where we pretend to be wizards of vision.  The algorithm is
+    intentionally loose and noisy—perfect for feeding a synth:
+
+    1. Convert the region of interest (ROI) to grayscale and run a Canny edge
+       detector.  This gives us a cheap silhouette of whatever the detector
+       thinks is there.
+    2. Find the biggest contour in that edge map.  Its area and perimeter feed a
+       **compactness** metric: 1.0 means "round as a punk's mohawk," while lower
+       values hint at jagged or skinny shapes.
+    3. Mix in average **brightness** (from the V channel of HSV) so darker
+       objects don't hog the spotlight.
+    4. Subtract hue variance because wildly colored blobs are usually messy
+       shapes.  Less color chaos → higher score.
+
+    The final number rolls all that into a single 0..1 value—noisy, biased, and
+    ready for sonic mayhem.
+    """
+
+    # Bail out early if the ROI is empty; no pixels, no party.
+    if bgr_roi.size == 0:
+        return 0.0
+
+    # Step 1: carve out edges so we know where the shape lives.
+    gray = cv2.cvtColor(bgr_roi, cv2.COLOR_BGR2GRAY)
+    edges = cv2.Canny(gray, 50, 150)
+
+    # Step 2: grab the fattest contour and measure its girth.
+    cnts, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    if not cnts:
+        return 0.0
+    cnt = max(cnts, key=cv2.contourArea)
+    area = cv2.contourArea(cnt)
+    peri = cv2.arcLength(cnt, True)
+    if peri == 0:
+        return 0.0
+    compact = 4.0 * math.pi * area / (peri * peri)  # 1.0 = perfect circle
+
+    # Step 3: weigh by brightness so ghostly dark shapes stay quiet.
+    hsv = cv2.cvtColor(bgr_roi, cv2.COLOR_BGR2HSV)
+    bright = float(np.mean(hsv[:, :, 2]) / 255.0)
+
+    # Step 4: penalize rainbow chaos; uniform color keeps the score hot.
+    hue_std = float(np.std(hsv[:, :, 0]) / 180.0)  # normalize 0..1
+
+    # Mash everything together, clip to 0..1 for sanity.
+    score = compact * bright * (1.0 - hue_std)
+    return float(np.clip(score, 0.0, 1.0))
+
+
 def main(args: argparse.Namespace) -> None:
     """Open the video, run tracking, and write the score."""
 
@@ -93,6 +145,7 @@ def main(args: argparse.Namespace) -> None:
         "sat",
         "val",
         "edge",
+        "shape",
     ])
     stream_id = args.stream_id
 
@@ -134,13 +187,14 @@ def main(args: argparse.Namespace) -> None:
                 spd = math.sqrt(dx * dx + dy * dy) * fps
             prev_center[oid] = (cx, cy)
 
-            # crop region of interest for color/edge features
+            # crop region of interest for color/edge/shape features
             x1i, y1i = int(max(0, x1)), int(max(0, y1))
             x2i, y2i = int(min(W, x2)), int(min(H, y2))
             roi = frame[y1i:y2i, x1i:x2i] if frame is not None else np.array([])
             hue, sat, val = hsv_stats(roi)
             gray_roi = cv2.cvtColor(roi, cv2.COLOR_BGR2GRAY) if roi.size else np.array([])
             edge = edge_density(gray_roi)
+            shape = shape_magic(roi)
 
             wr.writerow(
                 [
@@ -158,6 +212,7 @@ def main(args: argparse.Namespace) -> None:
                     round(sat, 3),
                     round(val, 3),
                     round(edge, 3),
+                    round(shape, 3),
                 ]
             )
     out.close()
