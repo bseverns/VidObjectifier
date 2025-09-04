@@ -34,7 +34,9 @@ Picture a security camera feeding a garage band.
 
 ## Why bother?
 
-- **Low cost, high grit.** Everything here runs on free tools: SuperCollider,
+- **Low cost, high grit.** Everything here runs on free tools, save the Jetson
+  Nano which can be had for ~$225 right now. Not my favorite situation, but 
+  when life gives you beautiful Jetsons, you make things that run: SuperCollider, 
   JACK, and a Jetson that you probably already cooked noodles on.
 - **Every object gets a personality.** The analyzer measures position, speed,
   color, even a janky "glitch" metric.  The renderer maps those numbers to
