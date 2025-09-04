@@ -10,7 +10,7 @@ small and loud on purpose so you can read it like liner notes.
 
 ## In plain English
 
-There are only two moving parts:
+There are two main moving parts (plus a lo-fi Processing sketch if you want to stay in Java land):
 
 1. **Analyzer** (`analyzer/vid2score.py`)
    - Python script that runs on a Jetson Nano (or any CUDA Jetson).
@@ -19,6 +19,8 @@ There are only two moving parts:
 2. **Renderer** (`renderer/render.scd` or `renderer/render_ring8.scd`)
    - SuperCollider patch that reads the score and gives every object a voice.
    - Default budget is **20 voices**, so things stay musical instead of mush.
+3. **Processing sketch** (`processing/VidObjectifierProcessing.pde`)
+   - Webcam-in, sine-wave-out demo that skips Python and SuperCollider.
 
 Picture a security camera feeding a garage band.
 
@@ -64,6 +66,9 @@ Picture a security camera feeding a garage band.
 ├── examples/
 │   ├── input.mp4              # drop your video here
 │   └── score_example.csv      # tiny header-only example
+├── processing/
+│   ├── VidObjectifierProcessing.pde # webcam → sine wave demo
+│   └── README.md                    # how to run the gremlin
 └── README.md                  # you are here
 ```
 
@@ -135,6 +140,12 @@ Once a renderer is running, call `~playScore` with the path to your CSV:
 
 The renderer keeps a voice alive a few seconds after the last update so tails
 breathe instead of choking.
+
+---
+
+## Processing quickie
+
+If you're allergic to command lines or just want a one-file noise gremlin, peek at `processing/VidObjectifierProcessing.pde`. Open it in the Processing IDE, install the **Minim** library, and run. The brightest spot in the camera maps to a sine wave's pitch and volume. It's cheap and dirty and that's the point.
 
 ---
 
