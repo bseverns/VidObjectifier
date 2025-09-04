@@ -1,33 +1,45 @@
-# Processing Noise Gremlin
+# Processing Noise Gremlin 2.0
 
-Welcome to the **lo-fi, all-in-one** version of VidObjectifier. This sketch watches your webcam and spits out a single sine wave whose pitch and volume chase the brightest blob in view. It's the punk little cousin of the Python analyzer and SuperCollider renderer.
+This sketch grew up a bit. Instead of chasing the single brightest pixel, it now
+uses **OpenCV** to spot moving blobs, measures a fistful of features, and gives
+each blob its own sine voice. It's still scrappy Java, but it mirrors the
+Python analyzer's spirit.
 
 ## Why this exists
 
-Some folks just want to crack open Processing, hit run, and get weird. No Python, no SuperCollider, just straight Java vibes. This sketch keeps it simple so you can poke at the ideas quickly.
+Not everyone wants to juggle Python + SuperCollider. This Processing version
+shows the whole pipeline—detection, character stats, and sound—in one file.
+Read it like a manual for building your own noisy camera band.
 
-## How to run it
+## Setup
 
 1. Install [Processing](https://processing.org/).
-2. In Processing, go to **Sketch → Import Library → Add Library** and install **Minim**.
-3. Drop the `VidObjectifierProcessing.pde` file into its own folder named `VidObjectifierProcessing` (Processing loves matching names).
-4. Open the sketch and smash the **Run** button.
-5. Point a flashlight, your phone screen, or a shiny object at the camera and hear the pitch go wild.
+2. From the IDE choose **Sketch → Import Library → Add Library** and grab
+   **Minim** and **OpenCV for Processing**.
+3. Drop `VidObjectifierProcessing.pde` into a folder named
+   `VidObjectifierProcessing` and open it.
+4. Smash the **Run** button. A webcam window pops up and starts yodeling.
 
-## What it's doing
+## What it's doing now
 
-- Grabs frames from your default webcam.
-- Searches each frame for the brightest pixel.
-- Draws a red dot on that pixel so you can see what's driving the sound.
-- Maps horizontal position → frequency and brightness → amplitude.
-- A lone sine oscillator drones along based on those values.
+- Pulls frames from your default camera.
+- Runs a cheap motion detector (blur + threshold + contours).
+- For each contour it computes:
+  - azimuth/elevation/dist of the blob in frame-space,
+  - motion speed,
+  - a glitch score from horizontal edges,
+  - average hue, saturation, and brightness,
+  - edge density and a cockeyed "shape" score.
+- Each blob gets a sine oscillator. Azimuth maps to pitch, speed maps to volume.
+- Stats spew to the console so you can log or plot them.
 
-## Where to hack
+## Hacks invited
 
-- Swap the sine wave for something gnarlier in the `Oscil` setup.
-- Use Processing's `Movie` class instead of `Capture` to analyze prerecorded video.
-- Add more oscillators and let each bright blob own a voice.
+- Swap the sine waves for wilder synths.
+- Dump the printed stats into a CSV and drive SuperCollider live.
+- Replace the contour detector with a legit DNN if you're feeling fancy.
 
 ## Disclaimer
 
-This is not high art. It's a teaching tool and a playground. If you crash it, break it, or make it scream, you're doing it right.
+This is still a teaching toy. Expect glitches, rough edges, and occasional
+screams. That's the point.

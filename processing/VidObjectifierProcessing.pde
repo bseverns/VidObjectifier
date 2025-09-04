@@ -1,80 +1,207 @@
 // VidObjectifierProcessing.pde
-// A punk-rock Processing sketch that watches your webcam and screams in sine waves.
-// Think of it as the scrappy cousin to the Python+SuperCollider chain.
+// Webcam → quasi-analyzer with noisy voices.
 //
-// Dependencies:
-//   - Processing (https://processing.org/)
-//   - Video library (comes with Processing)
-//   - Minim audio library (install via Sketch → Import Library → Add Library)
+// The Python script in ../analyzer/vid2score.py runs YOLO and spits out a CSV
+// score packed with color, motion, and shape features.  This sketch can't run
+// YOLO (we're in Java/Processing land), but it tries to hit the same beats with
+// vanilla OpenCV tools.  Each detected blob gets a voice and a pile of nerdy
+// stats.
 //
-// This file is littered with comments because students deserve to know what's going on.
-// Run it from the Processing IDE or via processing-java.
+// Dependencies
+// ------------
+// * Processing + the "Video" library (built in)
+// * [OpenCV for Processing](https://github.com/atduskgreg/opencv-processing)
+// * [Minim](http://code.compartmental.net/tools/minim/)
+// Drop this file in a folder named "VidObjectifierProcessing" and run.
+//
+// The code is bloated with comments on purpose.  Treat it like a zine.
 
-import processing.video.*;      // Grab frames from webcam or video file
-import ddf.minim.*;             // Friendly audio toolkit
-import ddf.minim.ugens.*;       // Oscillator objects live here
+import processing.video.*;      // camera input
+import gab.opencv.*;            // OpenCV wrapper
+import ddf.minim.*;             // audio engine
+import ddf.minim.ugens.*;       // oscillator voices
+import java.util.*;
 
-Capture cam;        // Video capture object
-Minim minim;        // Minim engine
-AudioOutput out;    // Where sound is pushed
-Oscil osc;          // A single sine oscillator — our lone noisy voice
+Capture cam;
+OpenCV opencv;                  // for contour/edge work
 
-// setup() runs once when the sketch starts.
+Minim minim;
+AudioOutput out;
+
+// keep a synth voice per object id
+HashMap<Integer, Oscil> voices = new HashMap<Integer, Oscil>();
+HashMap<Integer, PVector> prevCenter = new HashMap<Integer, PVector>();
+int nextId = 0;
+
 void setup() {
-  size(640, 480);                       // Set window size
+  size(640, 480);
 
-  // Fire up the webcam. Processing will nag you if none is found.
-  cam = new Capture(this, 640, 480);    // width, height
-  cam.start();                          // Start grabbing frames
+  cam = new Capture(this, width, height);
+  cam.start();
 
-  // Kick the audio engine into gear and patch a silent oscillator to it.
+  opencv = new OpenCV(this, width, height);
+
   minim = new Minim(this);
-  out = minim.getLineOut();             // Stereo out
-  osc = new Oscil(440, 0.0, Waves.SINE); // 440Hz but silent at start
-  osc.patch(out);                       // Connect osc → speakers
+  out = minim.getLineOut();
 }
 
-// draw() loops forever. Each pass is a frame.
 void draw() {
-  background(0);                        // Black canvas each frame
+  background(0);
+  if (cam.available()) cam.read();
+  image(cam, 0, 0);
 
-  // Pull in a new frame if available.
-  if (cam.available()) {
-    cam.read();
+  opencv.loadImage(cam);
+  opencv.gray();
+
+  // glitch metric = mean abs horizontal edges
+  float glitch = glitchMeter(opencv.getGray());
+
+  // cheap motion mask → contours
+  opencv.blur(5);
+  opencv.threshold(32);
+  ArrayList<Contour> contours = opencv.findContours();
+
+  HashMap<Integer, PVector> seen = new HashMap<Integer, PVector>();
+
+  for (Contour c : contours) {
+    if (c.area() < 500) continue; // ignore specks
+    Rectangle r = c.getBoundingBox();
+    float cx = r.x + r.width/2.0;
+    float cy = r.y + r.height/2.0;
+    float area = r.width * r.height;
+
+    int id = assignId(cx, cy);
+    seen.put(id, new PVector(cx, cy));
+
+    float[] polar = toPolar(cx, cy, area, width, height);
+    float az = polar[0], el = polar[1], dist = polar[2];
+
+    float spd = 0;
+    if (prevCenter.containsKey(id)) {
+      PVector p = prevCenter.get(id);
+      spd = PVector.dist(p, new PVector(cx, cy)) / max(width, height) * frameRate;
+    }
+
+    // region of interest for color/shape nerdiness
+    PImage roi = cam.get(r.x, r.y, r.width, r.height);
+    float[] hsv = hsvStats(roi);
+    float edge = edgeDensity(roi);
+    float shape = shapeMagic(roi);
+
+    Oscil voice = voices.get(id);
+    if (voice == null) {
+      voice = new Oscil(440, 0, Waves.SINE);
+      voice.patch(out);
+      voices.put(id, voice);
+    }
+    // map azimuth → frequency, speed → amplitude
+    voice.setFrequency(map(az, -180, 180, 100, 1000));
+    voice.setAmplitude(constrain(spd, 0, 0.5));
+
+    noFill();
+    stroke(0, 255, 0);
+    rect(r.x, r.y, r.width, r.height);
+    fill(255);
+    text("id " + id, r.x, r.y - 4);
+
+    // spit stats to console so you can log/plot them later
+    println(frameCount, id, nf(az, 0, 2), nf(el,0,2), nf(dist,0,3),
+            nf(spd,0,3), nf(glitch,0,3),
+            nf(hsv[0],0,1), nf(hsv[1],0,3), nf(hsv[2],0,3),
+            nf(edge,0,3), nf(shape,0,3));
   }
-  cam.loadPixels();                     // Lets us read pixel array
-  image(cam, 0, 0);                     // Paint the camera frame to the window
 
-  // Find the brightest pixel in the frame.
-  int brightestIndex = 0;
-  float brightestValue = 0;
-  for (int i = 0; i < cam.pixels.length; i++) {
-    float b = brightness(cam.pixels[i]);
-    if (b > brightestValue) {
-      brightestValue = b;
-      brightestIndex = i;
+  // ditch voices for vanished objects
+  for (Integer id : voices.keySet()) {
+    if (!seen.containsKey(id)) {
+      voices.get(id).unpatch(out);
     }
   }
-
-  // Convert 1D pixel index back to 2D position.
-  int x = brightestIndex % cam.width;
-  int y = brightestIndex / cam.width;
-
-  // Draw a red circle where the brightest pixel lives.
-  noStroke();
-  fill(255, 0, 0);
-  ellipse(x, y, 20, 20);
-
-  // Map the x position to pitch and brightness to volume.
-  float freq = map(x, 0, cam.width, 100, 1000);      // 100Hz → 1kHz
-  float amp = map(brightestValue, 0, 255, 0, 0.5);   // Stay under clipping
-  osc.setFrequency(freq);
-  osc.setAmplitude(amp);
+  voices.keySet().retainAll(seen.keySet());
+  prevCenter = seen;
 }
 
-// When the window closes, unpatch and clean up.
+int assignId(float cx, float cy) {
+  int best = -1; float bestDist = 25;
+  for (Map.Entry<Integer, PVector> e : prevCenter.entrySet()) {
+    float d = dist(cx, cy, e.getValue().x, e.getValue().y);
+    if (d < bestDist) { bestDist = d; best = e.getKey(); }
+  }
+  if (best == -1) best = nextId++;
+  return best;
+}
+
+float glitchMeter(PImage gray) {
+  OpenCV gx = new OpenCV(this, gray);
+  gx.sobel(OpenCV.HORIZONTAL, 3);
+  gx.abs();
+  float sum = 0;
+  gx.getOutput().loadPixels();
+  for (int p : gx.getOutput().pixels) sum += brightness(p);
+  return constrain(sum / (gx.getOutput().pixels.length * 64.0), 0, 1);
+}
+
+float[] toPolar(float cx, float cy, float area, float W, float H) {
+  float az = cx / W * 360 - 180;
+  float el = (1 - cy / H) * 60 - 30;
+  float dist = max(0.05, 1.0 - area / (W * H));
+  return new float[]{az, el, dist};
+}
+
+float[] hsvStats(PImage roi) {
+  if (roi.width == 0 || roi.height == 0) return new float[]{0,0,0};
+  roi.loadPixels();
+  float h=0,s=0,v=0;
+  for (int c : roi.pixels) {
+    h += hue(c);
+    s += saturation(c)/255.0;
+    v += brightness(c)/255.0;
+  }
+  int n = roi.pixels.length;
+  return new float[]{(h/n), (s/n), (v/n)};
+}
+
+float edgeDensity(PImage roi) {
+  if (roi.width==0) return 0;
+  OpenCV e = new OpenCV(this, roi);
+  e.gray();
+  e.laplace(OpenCV.CV_32F);
+  float sum = 0;
+  e.getOutput().loadPixels();
+  for (int p : e.getOutput().pixels) sum += abs(brightness(p));
+  return constrain(sum/(e.getOutput().pixels.length*1000.0),0,1);
+}
+
+float shapeMagic(PImage roi) {
+  if (roi.width==0) return 0;
+  OpenCV s = new OpenCV(this, roi);
+  s.gray();
+  s.canny(50,150);
+  ArrayList<Contour> cs = s.findContours();
+  if (cs.size()==0) return 0;
+  Contour big = cs.get(0);
+  for (Contour c : cs) if (c.area()>big.area()) big = c;
+  float area = big.area();
+  float peri = big.perimeter();
+  if (peri==0) return 0;
+  float compact = 4*PI*area/(peri*peri);
+  PImage hsv = roi.copy();
+  hsv.loadPixels();
+  float val = 0, hueSum=0, hueSq=0;
+  for(int px : hsv.pixels){
+    float v = brightness(px)/255.0;
+    float h = hue(px);
+    val += v; hueSum += h; hueSq += h*h;
+  }
+  int n = hsv.pixels.length;
+  float bright = val/n;
+  float hueStd = sqrt(hueSq/n - (hueSum/n)*(hueSum/n))/180.0;
+  float score = compact * bright * (1 - hueStd);
+  return constrain(score,0,1);
+}
+
 void stop() {
-  osc.unpatch(out);
+  for (Oscil o : voices.values()) o.unpatch(out);
   out.close();
   minim.stop();
   super.stop();
