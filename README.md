@@ -20,7 +20,7 @@ There are two main moving parts (plus a lo-fi Processing sketch if you want to s
    - SuperCollider patch that reads the score and gives every object a voice.
    - Default budget is **20 voices**, so things stay musical instead of mush.
 3. **Processing sketch** (`processing/VidObjectifierProcessing.pde`)
-   - Webcam-in, sine-wave-out demo that skips Python and SuperCollider.
+   - Java/Processing rewrite that spots moving blobs with OpenCV and hands each one a sine voice.
 
 Picture a security camera feeding a garage band.
 
@@ -67,8 +67,8 @@ Picture a security camera feeding a garage band.
 │   ├── input.mp4              # drop your video here
 │   └── score_example.csv      # tiny header-only example
 ├── processing/
-│   ├── VidObjectifierProcessing.pde # webcam → sine wave demo
-│   └── README.md                    # how to run the gremlin
+│   ├── VidObjectifierProcessing.pde # webcam → blob tracker → sine choir
+│   └── README.md                    # how to run and hack the gremlin
 └── README.md                  # you are here
 ```
 
@@ -145,7 +145,7 @@ breathe instead of choking.
 
 ## Processing quickie
 
-If you're allergic to command lines or just want a one-file noise gremlin, peek at `processing/VidObjectifierProcessing.pde`. Open it in the Processing IDE, install the **Minim** library, and run. The brightest spot in the camera maps to a sine wave's pitch and volume. It's cheap and dirty and that's the point.
+If you're allergic to command lines or want everything in one Java file, peek at `processing/VidObjectifierProcessing.pde`. Open it in the Processing IDE, install the **Minim** and **OpenCV for Processing** libraries, and run. It tracks moving blobs, spits out color/motion/shape stats, and turns each blob into a sine voice. Cheap, loud, educational.
 
 ---
 
