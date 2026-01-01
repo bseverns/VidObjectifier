@@ -5,6 +5,13 @@ uses **OpenCV** to spot moving blobs, measures a fistful of features, and gives
 each blob its own sine voice. It's still scrappy Java, but it mirrors the
 Python analyzer's spirit.
 
+## Status: Legacy demo (teaching-only path)
+
+This Processing sketch is the **side quest**, not the mainline. The real
+pipeline lives in the **Python analyzer + SuperCollider renderer**—start there
+if you want the "official" flow and the best-supported path:
+[mainline pipeline in the root README](../README.md).
+
 ## Why this exists
 
 Not everyone wants to juggle Python + SuperCollider. This Processing version
