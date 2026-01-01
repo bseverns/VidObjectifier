@@ -129,4 +129,4 @@ this.executeFile((thisProcess.nowExecutingPath.dirname +/+ "mapping.scd"));
 )
 
 // Example usage:
-// ~playScore.(thisProcess.nowExecutingPath.dirname +/+ "../examples/score_example.csv");
+// ~playScore.(thisProcess.nowExecutingPath.dirname +/+ "../examples/score_example_template.csv");
