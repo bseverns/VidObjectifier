@@ -36,6 +36,8 @@ SynthDef(\engine_modal, { |out=0, pan=0, baseHz=120, damp=0.4, hit=0.0, drive=0,
 }).add;
 
 // ===== load mapping file (class→timbre) =====
+// mapping.scd is auto-generated from config/timbre_map.yaml. If you edit the YAML,
+// rerun renderer/generate_mapping.py so SuperCollider hears the updated map.
 this.executeFile((thisProcess.nowExecutingPath.dirname +/+ "mapping.scd"));
 
 // ===== helper functions =====
@@ -101,7 +103,7 @@ this.executeFile((thisProcess.nowExecutingPath.dirname +/+ "mapping.scd"));
             t = t.asFloat;
             (t - (thisThread.seconds - t0)).max(0).wait;
 
-            var fam = (~classToFamily[cls.asInteger] ? \servo);
+            var fam = (~classToFamily[cls.asInteger] ? ~defaultFamily);
             var key = "%:%".format(stream, oid);
             var feats = (
                 az: az.asFloat, el: el.asFloat, dist: dist.asFloat, spd: spd.asFloat,

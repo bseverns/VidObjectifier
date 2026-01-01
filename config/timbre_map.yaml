@@ -1,3 +1,5 @@
+# This YAML is the source-of-truth for the default SuperCollider mapping.
+# Edit it, then run `python3 renderer/generate_mapping.py` to regenerate mapping.scd.
 families:
   servo:   {engine: "fm_metal",   p: {ratio: [1.0, 3.0], index: [0.2, 7.0], cutoff: [800, 8000]}}
   hiss:    {engine: "noise_band", p: {center: [2000, 12000], q: [1, 12], rate: [3, 40]}}
