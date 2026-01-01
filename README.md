@@ -57,12 +57,12 @@ Picture a security camera feeding a garage band.
 ├── renderer/
 │   ├── render.scd             # SuperCollider renderer (stereo)
 │   ├── render_ring8.scd       # 8‑channel ring renderer
-│   ├── mapping.scd            # default class→timbre map
+│   ├── mapping.scd            # generated class→timbre map (see config/timbre_map.yaml)
 │   ├── mapping_steel_mill.scd # preset 1: steel, presses, belts
 │   ├── mapping_neon_glass.scd # preset 2: glass, hiss, sheen
 │   └── mapping_rust_choir.scd # preset 3: drones, rust, vocals-of-metal
 ├── config/
-│   └── timbre_map.yaml        # optional YAML reference
+│   └── timbre_map.yaml        # the real mapping source; generator writes mapping.scd
 ├── examples/
 │   ├── input.mp4              # drop your video here
 │   ├── score_example.csv      # tiny header-only example
@@ -169,6 +169,15 @@ Open SuperCollider, start JACK, and load one of:
 Each mapping file in `renderer/` tweaks the personality of the voices.  Swap in
 `mapping_steel_mill.scd`, `mapping_neon_glass.scd`, or `mapping_rust_choir.scd`
 for different vibes.  They all respect the same 20‑voice budget.
+
+If you want to tweak the default mapping, edit `config/timbre_map.yaml` and run:
+
+```bash
+python3 renderer/generate_mapping.py
+```
+
+That writes a fresh `renderer/mapping.scd` and keeps the YAML as the single source
+of truth. It's like tuning your synth with a wrench instead of random vibes.
 
 Once a renderer is running, call `~playScore` with the path to your CSV:
 
