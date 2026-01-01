@@ -73,7 +73,9 @@ Picture a security camera feeding a garage band.
 └── README.md                  # you are here
 ```
 
-Clone the repo, throw your own media into `examples/`, and hack away.
+Clone the repo, throw your own media into `examples/`, and hack away. The
+`*_template` files are there to teach the shape of the data — swap in real
+material before you run anything loud.
 
 ---
 
@@ -107,6 +109,8 @@ score is just text; open it in a spreadsheet if that makes you smile.
 
 ```bash
 cd analyzer
+# Replace examples/input_template.mp4 with your own footage (or point at a
+# different path) before you run this.
 python3 vid2score.py ../examples/input.mp4 --out ../examples/score_example.csv --stream_id camA
 
 # JSONL version (one JSON object per line, no header row)
@@ -182,7 +186,7 @@ of truth. It's like tuning your synth with a wrench instead of random vibes.
 Once a renderer is running, call `~playScore` with the path to your CSV:
 
 ```supercollider
-~playScore.("/full/path/to/examples/score_example.csv");
+~playScore.("/full/path/to/examples/score_run.csv");
 ```
 
 The renderer keeps a voice alive a few seconds after the last update so tails
@@ -237,7 +241,7 @@ MIT, because art should travel.
 ```bash
 # 1) Analyze a file
 cd analyzer
-python3 vid2score.py ../examples/input.mp4 --out ../examples/score_example.csv --stream_id camA
+python3 vid2score.py ../examples/input_template.mp4 --out ../examples/score_run.csv --stream_id camA
 
 # 2) Render it (in SuperCollider)
 # open renderer/render.scd OR renderer/render_ring8.scd and run; adjust path in ~playScore
