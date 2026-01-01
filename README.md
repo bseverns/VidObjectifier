@@ -25,7 +25,7 @@ There are two main moving parts (plus a lo-fi Processing sketch if you want to s
 Picture a security camera feeding a garage band.
 
 ```
-[video file / TouchDesigner] → [Jetson: detector + characterizer] → score.csv
+[video file / TouchDesigner] → [Jetson: detector + characterizer] → score.csv / score.jsonl
                                                      ↓
                                             [SuperCollider renderer]
                                                      ↓
@@ -57,15 +57,16 @@ Picture a security camera feeding a garage band.
 ├── renderer/
 │   ├── render.scd             # SuperCollider renderer (stereo)
 │   ├── render_ring8.scd       # 8‑channel ring renderer
-│   ├── mapping.scd            # default class→timbre map
+│   ├── mapping.scd            # generated class→timbre map (see config/timbre_map.yaml)
 │   ├── mapping_steel_mill.scd # preset 1: steel, presses, belts
 │   ├── mapping_neon_glass.scd # preset 2: glass, hiss, sheen
 │   └── mapping_rust_choir.scd # preset 3: drones, rust, vocals-of-metal
 ├── config/
-│   └── timbre_map.yaml        # optional YAML reference
+│   └── timbre_map.yaml        # the real mapping source; generator writes mapping.scd
 ├── examples/
-│   ├── input_template.mp4     # intentionally empty placeholder (swap in your own footage)
-│   └── score_example_template.csv # header-only score format sample
+│   ├── input.mp4              # drop your video here
+│   ├── score_example.csv      # tiny header-only example
+│   └── score_example.jsonl    # tiny JSONL example (one row)
 ├── processing/
 │   ├── VidObjectifierProcessing.pde # webcam → blob tracker → sine choir
 │   └── README.md                    # how to run and hack the gremlin
@@ -110,7 +111,10 @@ score is just text; open it in a spreadsheet if that makes you smile.
 cd analyzer
 # Replace examples/input_template.mp4 with your own footage (or point at a
 # different path) before you run this.
-python3 vid2score.py ../examples/input_template.mp4 --out ../examples/score_run.csv --stream_id camA
+python3 vid2score.py ../examples/input.mp4 --out ../examples/score_example.csv --stream_id camA
+
+# JSONL version (one JSON object per line, no header row)
+python3 vid2score.py ../examples/input.mp4 --out ../examples/score_example.jsonl --stream_id camA --format jsonl
 ```
 
 Want live video from TouchDesigner?  Add a **Stream Out TOP** (RTSP) or **NDI
@@ -125,6 +129,40 @@ analyze the post‑mix once to pull out macro "mood" controls.
 
 ---
 
+## Score schema (CSV + JSONL)
+
+Same data, two formats. CSV is a header row plus values. JSONL is one JSON
+object per line with the exact same keys. Pick your poison; both are loud and
+legible.
+
+**CSV header / JSONL keys**
+
+- `t` *(float)* — timestamp in seconds since start (rounded to 0.001).
+- `stream` *(string)* — source ID you passed in (`camA`, `camB`, etc.).
+- `oid` *(int)* — tracker object id.
+- `cls` *(int)* — YOLO class index.
+- `az` *(float)* — azimuth in degrees (-180..180).
+- `el` *(float)* — elevation in degrees (-30..30-ish).
+- `dist` *(float)* — fake distance (0..1) from box area.
+- `spd` *(float)* — speed in normalized screen units / second.
+- `conf` *(float)* — detection confidence (0..1).
+- `glitch` *(float)* — horizontal-edge chaos meter (0..1).
+- `hue` *(float)* — average hue in degrees (0..360).
+- `sat` *(float)* — average saturation (0..1).
+- `val` *(float)* — average value/brightness (0..1).
+- `edge` *(float)* — edge density (0..1).
+- `shape` *(float)* — compactness-ish shape score (0..1).
+
+**JSONL example**
+
+```jsonl
+{"t":0.033,"stream":"camA","oid":12,"cls":0,"az":14.2,"el":-3.1,"dist":0.742,"spd":0.02,"conf":0.91,"glitch":0.11,"hue":210.4,"sat":0.48,"val":0.62,"edge":0.33,"shape":0.29}
+```
+
+See `examples/score_example.jsonl` if you want a real file to poke at.
+
+---
+
 ## Running the renderer
 
 Open SuperCollider, start JACK, and load one of:
@@ -135,6 +173,15 @@ Open SuperCollider, start JACK, and load one of:
 Each mapping file in `renderer/` tweaks the personality of the voices.  Swap in
 `mapping_steel_mill.scd`, `mapping_neon_glass.scd`, or `mapping_rust_choir.scd`
 for different vibes.  They all respect the same 20‑voice budget.
+
+If you want to tweak the default mapping, edit `config/timbre_map.yaml` and run:
+
+```bash
+python3 renderer/generate_mapping.py
+```
+
+That writes a fresh `renderer/mapping.scd` and keeps the YAML as the single source
+of truth. It's like tuning your synth with a wrench instead of random vibes.
 
 Once a renderer is running, call `~playScore` with the path to your CSV:
 
