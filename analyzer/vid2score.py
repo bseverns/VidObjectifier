@@ -13,6 +13,7 @@ numbers into synth parameters.
 
 import argparse
 import csv
+import json
 import math
 
 import cv2
@@ -119,18 +120,7 @@ def shape_magic(bgr_roi: np.ndarray) -> float:
 def main(args: argparse.Namespace) -> None:
     """Open the video, run tracking, and write the score."""
 
-    cap = cv2.VideoCapture(args.video)
-    assert cap.isOpened(), f"Cannot open {args.video}"
-    fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
-    W = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-    H = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    model = YOLO(args.model)
-
-    prev_center: dict[int, tuple[float, float]] = {}
-    t = 0.0
-    out = open(args.out, "w", newline="")
-    wr = csv.writer(out)
-    wr.writerow([
+    field_order = [
         "t",
         "stream",
         "oid",
@@ -146,7 +136,21 @@ def main(args: argparse.Namespace) -> None:
         "val",
         "edge",
         "shape",
-    ])
+    ]
+    cap = cv2.VideoCapture(args.video)
+    assert cap.isOpened(), f"Cannot open {args.video}"
+    fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
+    W = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    H = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    model = YOLO(args.model)
+
+    prev_center: dict[int, tuple[float, float]] = {}
+    t = 0.0
+    out = open(args.out, "w", newline="")
+    writer = None
+    if args.format == "csv":
+        writer = csv.writer(out)
+        writer.writerow(field_order)
     stream_id = args.stream_id
 
     # Iterate over detection results from YOLO's built-in tracker.
@@ -196,25 +200,27 @@ def main(args: argparse.Namespace) -> None:
             edge = edge_density(gray_roi)
             shape = shape_magic(roi)
 
-            wr.writerow(
-                [
-                    round(t, 3),
-                    stream_id,
-                    oid,
-                    cls,
-                    round(az, 2),
-                    round(el, 2),
-                    round(dist, 3),
-                    round(spd, 3),
-                    round(conf, 3),
-                    round(gval, 3),
-                    round(hue, 1),
-                    round(sat, 3),
-                    round(val, 3),
-                    round(edge, 3),
-                    round(shape, 3),
-                ]
-            )
+            row = {
+                "t": round(t, 3),
+                "stream": stream_id,
+                "oid": oid,
+                "cls": cls,
+                "az": round(az, 2),
+                "el": round(el, 2),
+                "dist": round(dist, 3),
+                "spd": round(spd, 3),
+                "conf": round(conf, 3),
+                "glitch": round(gval, 3),
+                "hue": round(hue, 1),
+                "sat": round(sat, 3),
+                "val": round(val, 3),
+                "edge": round(edge, 3),
+                "shape": round(shape, 3),
+            }
+            if writer is None:
+                out.write(json.dumps(row, ensure_ascii=False) + "\n")
+            else:
+                writer.writerow([row[key] for key in field_order])
     out.close()
 
 
@@ -226,6 +232,6 @@ if __name__ == "__main__":
     p.add_argument("--imgsz", type=int, default=640)
     p.add_argument("--conf", type=float, default=0.25)
     p.add_argument("--stream_id", default="camA")
+    p.add_argument("--format", choices=("csv", "jsonl"), default="csv")
     args = p.parse_args()
     main(args)
-
