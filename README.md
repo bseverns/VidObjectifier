@@ -2,13 +2,13 @@
 
 *A tiny GPU watches video and scribbles a score; SuperCollider turns the scribble into a noisy choir.*
 
-This repo is half diary, half toolkit.  It's for anyone who wants to poke at the
+This repo is a log, and it is a toolkit.  It's for anyone who wants to poke at the
 idea of **objects in a camera frame becoming musical voices**.  The code is kept
 small and loud on purpose so you can read it like liner notes.
 
 ---
 
-## In plain English
+## In plain language:
 
 There are two main moving parts (plus a lo-fi Processing sketch if you want to stay in Java land):
 
