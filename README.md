@@ -25,7 +25,7 @@ There are two main moving parts (plus a lo-fi Processing sketch if you want to s
 Picture a security camera feeding a garage band.
 
 ```
-[video file / TouchDesigner] → [Jetson: detector + characterizer] → score.csv
+[video file / TouchDesigner] → [Jetson: detector + characterizer] → score.csv / score.jsonl
                                                      ↓
                                             [SuperCollider renderer]
                                                      ↓
@@ -65,7 +65,8 @@ Picture a security camera feeding a garage band.
 │   └── timbre_map.yaml        # optional YAML reference
 ├── examples/
 │   ├── input.mp4              # drop your video here
-│   └── score_example.csv      # tiny header-only example
+│   ├── score_example.csv      # tiny header-only example
+│   └── score_example.jsonl    # tiny JSONL example (one row)
 ├── processing/
 │   ├── VidObjectifierProcessing.pde # webcam → blob tracker → sine choir
 │   └── README.md                    # how to run and hack the gremlin
@@ -107,6 +108,9 @@ score is just text; open it in a spreadsheet if that makes you smile.
 ```bash
 cd analyzer
 python3 vid2score.py ../examples/input.mp4 --out ../examples/score_example.csv --stream_id camA
+
+# JSONL version (one JSON object per line, no header row)
+python3 vid2score.py ../examples/input.mp4 --out ../examples/score_example.jsonl --stream_id camA --format jsonl
 ```
 
 Want live video from TouchDesigner?  Add a **Stream Out TOP** (RTSP) or **NDI
@@ -118,6 +122,40 @@ python3 vid2score.py "rtsp://<ip>:<port>/<name>" --out score_camA.csv --stream_i
 
 Best practice is to analyze each pre‑mix stream for object‑level timbres, then
 analyze the post‑mix once to pull out macro "mood" controls.
+
+---
+
+## Score schema (CSV + JSONL)
+
+Same data, two formats. CSV is a header row plus values. JSONL is one JSON
+object per line with the exact same keys. Pick your poison; both are loud and
+legible.
+
+**CSV header / JSONL keys**
+
+- `t` *(float)* — timestamp in seconds since start (rounded to 0.001).
+- `stream` *(string)* — source ID you passed in (`camA`, `camB`, etc.).
+- `oid` *(int)* — tracker object id.
+- `cls` *(int)* — YOLO class index.
+- `az` *(float)* — azimuth in degrees (-180..180).
+- `el` *(float)* — elevation in degrees (-30..30-ish).
+- `dist` *(float)* — fake distance (0..1) from box area.
+- `spd` *(float)* — speed in normalized screen units / second.
+- `conf` *(float)* — detection confidence (0..1).
+- `glitch` *(float)* — horizontal-edge chaos meter (0..1).
+- `hue` *(float)* — average hue in degrees (0..360).
+- `sat` *(float)* — average saturation (0..1).
+- `val` *(float)* — average value/brightness (0..1).
+- `edge` *(float)* — edge density (0..1).
+- `shape` *(float)* — compactness-ish shape score (0..1).
+
+**JSONL example**
+
+```jsonl
+{"t":0.033,"stream":"camA","oid":12,"cls":0,"az":14.2,"el":-3.1,"dist":0.742,"spd":0.02,"conf":0.91,"glitch":0.11,"hue":210.4,"sat":0.48,"val":0.62,"edge":0.33,"shape":0.29}
+```
+
+See `examples/score_example.jsonl` if you want a real file to poke at.
 
 ---
 
@@ -195,4 +233,3 @@ python3 vid2score.py ../examples/input.mp4 --out ../examples/score_example.csv -
 # 2) Render it (in SuperCollider)
 # open renderer/render.scd OR renderer/render_ring8.scd and run; adjust path in ~playScore
 ```
-
