@@ -65,8 +65,9 @@ Picture a security camera feeding a garage band.
 │   └── timbre_map.yaml        # the real mapping source; generator writes mapping.scd
 ├── examples/
 │   ├── input.mp4              # drop your video here
-│   ├── score_example.csv      # tiny header-only example
+│   ├── score_example.csv      # small real-ish example (CSV)
 │   └── score_example.jsonl    # tiny JSONL example (one row)
+│   └── score_example_template.csv # header-only CSV template
 ├── processing/
 │   ├── VidObjectifierProcessing.pde # webcam → blob tracker → sine choir
 │   └── README.md                    # how to run and hack the gremlin
@@ -129,29 +130,30 @@ analyze the post‑mix once to pull out macro "mood" controls.
 
 ---
 
-## Score schema (CSV + JSONL)
+## Score Schema
 
 Same data, two formats. CSV is a header row plus values. JSONL is one JSON
 object per line with the exact same keys. Pick your poison; both are loud and
-legible.
+legible. This is the schema-as-contract — tweak it if you must, but don’t be
+surprised if your synth complains.
 
-**CSV header / JSONL keys**
-
-- `t` *(float)* — timestamp in seconds since start (rounded to 0.001).
-- `stream` *(string)* — source ID you passed in (`camA`, `camB`, etc.).
-- `oid` *(int)* — tracker object id.
-- `cls` *(int)* — YOLO class index.
-- `az` *(float)* — azimuth in degrees (-180..180).
-- `el` *(float)* — elevation in degrees (-30..30-ish).
-- `dist` *(float)* — fake distance (0..1) from box area.
-- `spd` *(float)* — speed in normalized screen units / second.
-- `conf` *(float)* — detection confidence (0..1).
-- `glitch` *(float)* — horizontal-edge chaos meter (0..1).
-- `hue` *(float)* — average hue in degrees (0..360).
-- `sat` *(float)* — average saturation (0..1).
-- `val` *(float)* — average value/brightness (0..1).
-- `edge` *(float)* — edge density (0..1).
-- `shape` *(float)* — compactness-ish shape score (0..1).
+| Column | Type | Units | Range | Notes |
+| --- | --- | --- | --- | --- |
+| `t` | float | seconds | `>= 0` | Timestamp since start (rounded to 0.001). |
+| `stream` | string | n/a | any | Source ID you passed in (`camA`, `camB`, etc.). |
+| `oid` | int | n/a | `>= 0` | Tracker object ID. |
+| `cls` | int | n/a | `>= 0` | YOLO class index. |
+| `az` | float | degrees | `-180..180` | Azimuth around the listener. |
+| `el` | float | degrees | `-30..30` | Elevation (ish). |
+| `dist` | float | normalized | `0..1` | Fake distance derived from box area. |
+| `spd` | float | normalized/sec | `0..~2` | Speed in normalized screen units per second. |
+| `conf` | float | probability | `0..1` | Detection confidence. |
+| `glitch` | float | normalized | `0..1` | Horizontal-edge chaos meter. |
+| `hue` | float | degrees | `0..360` | Average hue. |
+| `sat` | float | normalized | `0..1` | Average saturation. |
+| `val` | float | normalized | `0..1` | Average brightness/value. |
+| `edge` | float | normalized | `0..1` | Edge density. |
+| `shape` | float | normalized | `0..1` | Compactness-ish shape score. |
 
 **JSONL example**
 
