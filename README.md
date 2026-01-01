@@ -121,6 +121,36 @@ analyze the post‑mix once to pull out macro "mood" controls.
 
 ---
 
+## Score Schema
+
+This score is the **contract** between the analyzer and any renderer/patch you
+dream up.  Each row is one object at one moment in time—like a scribbled lab
+note that just happens to be CSV.  Here’s the field map, with units and ranges
+so you can bend it without breaking it:
+
+| Column | What it means | Units | Range |
+| --- | --- | --- | --- |
+| `t` | Timestamp since analysis start. | seconds | `>= 0` |
+| `stream` | Stream identifier (`--stream_id`). | string | any label |
+| `oid` | Object track ID from YOLO. | integer | `>= 0` |
+| `cls` | Object class ID from the model’s label map. | integer | `>= 0` |
+| `az` | Azimuth: left/right angle from frame center. | degrees | `-180..180` |
+| `el` | Elevation: up/down angle from frame center. | degrees | `-30..30` |
+| `dist` | Fake distance from camera (based on box area). | unitless | `0.05..1.0` |
+| `spd` | Normalized pixel speed between frames. | 1/sec | `>= 0` (roughly `0..(fps*√2)`) |
+| `conf` | Detector confidence. | unitless | `0..1` |
+| `glitch` | Horizontal‑edge glitch meter for the whole frame. | unitless | `0..1` |
+| `hue` | Average hue of the object ROI. | degrees | `0..360` |
+| `sat` | Average saturation of the object ROI. | unitless | `0..1` |
+| `val` | Average value/brightness of the object ROI. | unitless | `0..1` |
+| `edge` | Edge density inside the object ROI. | unitless | `0..1` |
+| `shape` | “Shape magic” score (compactness + brightness – color chaos). | unitless | `0..1` |
+
+Treat this like a punk‑rock MIDI spec: it’s loose, it’s loud, and it’s begging
+to be remapped.
+
+---
+
 ## Running the renderer
 
 Open SuperCollider, start JACK, and load one of:
@@ -195,4 +225,3 @@ python3 vid2score.py ../examples/input.mp4 --out ../examples/score_example.csv -
 # 2) Render it (in SuperCollider)
 # open renderer/render.scd OR renderer/render_ring8.scd and run; adjust path in ~playScore
 ```
-
