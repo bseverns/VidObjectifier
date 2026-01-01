@@ -196,7 +196,7 @@ breathe instead of choking.
 
 ## Processing quickie
 
-If you're allergic to command lines or want everything in one Java file, peek at `processing/VidObjectifierProcessing.pde`. Open it in the Processing IDE, install the **Minim** and **OpenCV for Processing** libraries, and run. It tracks moving blobs, spits out color/motion/shape stats, and turns each blob into a sine voice. Cheap, loud, educational.
+If you're allergic to command lines or want everything in one Java file, peek at `processing/VidObjectifierProcessing.pde`. It's an **alternate learning path**, not the primary pipeline. Open it in the Processing IDE, install the **Minim** and **OpenCV for Processing** libraries, and run. It tracks moving blobs, spits out color/motion/shape stats, and turns each blob into a sine voice. Cheap, loud, educational.
 
 ---
 
